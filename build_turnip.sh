@@ -9,14 +9,9 @@ srcfolder="mesa"
 BUILD_VERSION="${BUILD_VERSION:-1.0}"
 
 run_all(){
-    check_deps
     prepare_workdir
     apply_optimizations
     build_lib_for_android gen8
-}
-
-check_deps(){
-    pip install --upgrade meson mako --break-system-packages &> /dev/null || true
 }
 
 prepare_workdir(){
@@ -35,12 +30,12 @@ prepare_workdir(){
     
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches do ZIP original
+    # Aplicar patches do ZIP original (com -N para não perguntar se já aplicado)
     echo "Applying original patches from ZIP..."
     for p in ../../patches/*.patch ../../*.patch; do
         if [ -f "$p" ]; then
             echo "Applying $p"
-            patch -p1 -F3 < "$p" || echo "Failed to apply $p, skipping..."
+            patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."
         fi
     done
 }
@@ -102,7 +97,8 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    python3 -m meson setup build-android-aarch64 \
+    # Usar o meson do sistema que instalamos no workflow
+    meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
         -Dbuildtype=release \

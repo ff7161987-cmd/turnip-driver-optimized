@@ -56,8 +56,6 @@ apply_optimizations(){
     fi
 
     # 4. Adaptive Memory Compression (UBWC)
-    # Nota: Forçar UBWC via código pode causar falhas se não houver suporte no kernel. 
-    # Vamos habilitar apenas se o arquivo existir e for seguro.
     [ -f src/freedreno/vulkan/tu_image.cc ] && sed -i 's/has_ubwc = false/has_ubwc = true/g' src/freedreno/vulkan/tu_image.cc || true
 
     # 5. Pipeline Prefetch
@@ -99,8 +97,7 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Removida a opção -Dlibarchive=disabled pois ela não existe nesta versão do Mesa
-    # O erro de OpenSSL será resolvido instalando libssl-dev no workflow
+    # Forçar a desativação do libarchive via wrap e outras dependências problemáticas
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -110,8 +107,15 @@ EOF
         -Dgallium-drivers= \
         -Dvulkan-drivers=freedreno \
         -Dfreedreno-kmds=kgsl \
-        -Degl=disabled
+        -Degl=disabled \
+        -Dwrap_mode=nodownload
     
+    # Se o meson falhar por causa do libarchive, vamos tentar desativar via sed no meson.build
+    if [ $? -ne 0 ]; then
+        sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
+        meson setup build-android-aarch64 --cross-file "android-aarch64.txt" --prefix "/tmp/turnip-$1" -Dbuildtype=release -Dplatforms=android -Dandroid-stub=true -Dgallium-drivers= -Dvulkan-drivers=freedreno -Dfreedreno-kmds=kgsl -Degl=disabled
+    fi
+
     ninja -C build-android-aarch64 install
 
     cd "/tmp/turnip-$1/lib"

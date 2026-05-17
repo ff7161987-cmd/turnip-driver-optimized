@@ -30,10 +30,10 @@ prepare_workdir(){
     
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches do ZIP original
+    # Aplicar patches do ZIP original (Removendo tu_gen8.patch que causa erro de sintaxe)
     echo "Applying original patches from ZIP..."
     for p in ../../patches/*.patch ../../*.patch; do
-        if [ -f "$p" ]; then
+        if [ -f "$p" ] && [[ "$p" != *"tu_gen8.patch"* ]]; then
             echo "Applying $p"
             patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."
         fi
@@ -97,7 +97,9 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Forçar a desativação do libarchive via wrap e outras dependências problemáticas
+    # Forçar a desativação do libarchive via sed no meson.build
+    sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
+
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -110,12 +112,6 @@ EOF
         -Degl=disabled \
         -Dwrap_mode=nodownload
     
-    # Se o meson falhar por causa do libarchive, vamos tentar desativar via sed no meson.build
-    if [ $? -ne 0 ]; then
-        sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
-        meson setup build-android-aarch64 --cross-file "android-aarch64.txt" --prefix "/tmp/turnip-$1" -Dbuildtype=release -Dplatforms=android -Dandroid-stub=true -Dgallium-drivers= -Dvulkan-drivers=freedreno -Dfreedreno-kmds=kgsl -Degl=disabled
-    fi
-
     ninja -C build-android-aarch64 install
 
     cd "/tmp/turnip-$1/lib"

@@ -1,7 +1,6 @@
 #!/bin/bash -e
 set -o pipefail
 
-deps="git meson ninja patchelf unzip curl pip flex bison zip glslangValidator python3"
 workdir="$(pwd)/turnip_workdir"
 ndkver="android-ndk-r26b"
 ndk="$workdir/$ndkver/toolchains/llvm/prebuilt/linux-x86_64/bin"
@@ -10,15 +9,9 @@ srcfolder="mesa"
 BUILD_VERSION="${BUILD_VERSION:-1.0}"
 
 run_all(){
-    check_deps
     prepare_workdir
     apply_optimizations
     build_lib_for_android gen8
-}
-
-check_deps(){
-    # Atualizar meson via pip para garantir versão >= 1.4.0
-    pip install --upgrade meson mako --break-system-packages &> /dev/null || true
 }
 
 prepare_workdir(){
@@ -33,14 +26,17 @@ prepare_workdir(){
     git clone "$mesasrc" --depth=1 --no-single-branch "$srcfolder"
     cd "$srcfolder"
     
+    # Mudar para a branch correta ANTES de aplicar patches e otimizações
+    git checkout origin/gen8 || true
+    
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches originais
+    # Aplicar patches originais (com tolerância a falhas)
     echo "Applying original patches..."
     for p in ../../patches/*.patch ../../*.patch; do
         if [ -f "$p" ]; then
             echo "Applying $p"
-            patch -p1 < "$p" || echo "Failed to apply $p, skipping..."
+            patch -p1 -F3 < "$p" || echo "Failed to apply $p, skipping..."
         fi
     done
 }
@@ -50,25 +46,21 @@ apply_optimizations(){
     cd "$workdir/$srcfolder"
 
     # 1. Async Shader Compilation & Persistent Pipeline Caching
-    # Habilitar por padrão e forçar cache agressivo
     sed -i 's/TU_DEBUG_CACHE/TU_DEBUG_CACHE | TU_DEBUG_ASYNC/g' src/freedreno/vulkan/tu_device.cc || true
     
     # 2. Timeline Synchronization & Minimal Barrier Insertion
-    # Otimizar barreiras no command buffer
-    sed -i 's/pipeline_barrier/minimal_pipeline_barrier/g' src/freedreno/vulkan/tu_cmd_buffer.c || true
+    # Nota: Arquivos em C++ terminam em .cc no Mesa moderno
+    [ -f src/freedreno/vulkan/tu_cmd_buffer.cc ] && sed -i 's/pipeline_barrier/minimal_pipeline_barrier/g' src/freedreno/vulkan/tu_cmd_buffer.cc || true
 
     # 3. Shader Instruction Fusion
-    # Habilitar otimizações do compilador IR3
-    if grep -q "ir3_optimize_loop" src/freedreno/ir3/ir3_shader.c; then
+    if [ -f src/freedreno/ir3/ir3_shader.c ]; then
         sed -i '/ir3_optimize_loop/a \   ir3_fusion_pass(shader);' src/freedreno/ir3/ir3_shader.c || true
     fi
 
     # 4. Adaptive Memory Compression
-    # Forçar UBWC (Universal Bandwidth Compression) onde possível
-    sed -i 's/has_ubwc = false/has_ubwc = true/g' src/freedreno/vulkan/tu_image.c || true
+    [ -f src/freedreno/vulkan/tu_image.cc ] && sed -i 's/has_ubwc = false/has_ubwc = true/g' src/freedreno/vulkan/tu_image.cc || true
 
     # 5. Pipeline Prefetch
-    # Aumentar o prefetch de comandos
     if [ -f src/freedreno/vulkan/tu_private.h ]; then
         sed -i 's/CP_PREFETCH_CNT = 16/CP_PREFETCH_CNT = 64/g' src/freedreno/vulkan/tu_private.h || true
     fi
@@ -76,7 +68,6 @@ apply_optimizations(){
 
 build_lib_for_android(){
     cd "$workdir/$srcfolder"
-    git checkout "origin/$1" || true
 
     mkdir -p "$workdir/bin"
     ln -sf "$ndk/clang" "$workdir/bin/cc"
@@ -108,8 +99,10 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Usar meson instalado via pip
-    python3 -m meson setup build-android-aarch64 \
+    # Garantir que o meson está disponível
+    pip install --upgrade meson mako --break-system-packages
+    
+    meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
         -Dbuildtype=release \

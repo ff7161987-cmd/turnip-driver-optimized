@@ -39,12 +39,14 @@ prepare_workdir(){
         fi
     done
 
-    # CORREÇÃO PARA O ERRO DE LINKAGEM (zlib/gzopen)
-    # O Mesa tenta usar zlib para arquivos .rd (registro de comandos). 
-    # Como desativamos zlib, precisamos desativar o código que o usa.
+    # CORREÇÃO AGRESSIVA PARA O ERRO DE LINKAGEM (zlib/gzopen)
+    # O Mesa tem várias verificações HAVE_ZLIB. Vamos desativar todas no código-fonte.
+    echo "Disabling all ZLIB references in source code..."
+    grep -rl "HAVE_ZLIB" . | xargs sed -i 's/HAVE_ZLIB/DISABLED_HAVE_ZLIB/g' || true
+    
+    # Especificamente para o freedreno_rd_output.c que estava causando o erro
     if [ -f src/freedreno/common/freedreno_rd_output.c ]; then
-        echo "Disabling zlib usage in freedreno_rd_output.c..."
-        sed -i 's/#ifdef HAVE_ZLIB/#if 0/g' src/freedreno/common/freedreno_rd_output.c
+        sed -i 's/#include <zlib.h>//g' src/freedreno/common/freedreno_rd_output.c
     fi
 }
 

@@ -32,9 +32,8 @@ prepare_workdir(){
 
     # Aplicar patches do ZIP original (Apenas os que não quebram o build)
     echo "Applying original patches from ZIP..."
-    # Pular tu_gen8.patch e tu8_kgsl_26.patch pois eles causam erros de sintaxe/atributo no Python
-    # O tu_gen8_clean.patch já cobre o suporte necessário.
-    for p in ../../patches/force_sysmem_no_autotuner.patch ../../patches/quest3.patch ../../patches/tu_gen8_clean.patch ../../patches/vk_sync_timeline.patch; do
+    # Removendo tu_gen8_clean.patch pois ele também está causando erros de NameError no Python
+    for p in ../../patches/force_sysmem_no_autotuner.patch ../../patches/quest3.patch ../../patches/vk_sync_timeline.patch; do
         if [ -f "$p" ]; then
             echo "Applying $p"
             patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."

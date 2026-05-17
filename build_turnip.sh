@@ -17,12 +17,8 @@ run_all(){
 }
 
 check_deps(){
-    for deps_chk in $deps; do
-        if ! command -v "$deps_chk" >/dev/null 2>&1 ; then
-            echo "Missing dep: $deps_chk"
-        fi
-    done
-    pip install mako --break-system-packages &> /dev/null || true
+    # Atualizar meson via pip para garantir versão >= 1.4.0
+    pip install --upgrade meson mako --break-system-packages &> /dev/null || true
 }
 
 prepare_workdir(){
@@ -63,7 +59,9 @@ apply_optimizations(){
 
     # 3. Shader Instruction Fusion
     # Habilitar otimizações do compilador IR3
-    sed -i '/ir3_optimize_loop/a \   ir3_fusion_pass(shader);' src/freedreno/ir3/ir3_shader.c || true
+    if grep -q "ir3_optimize_loop" src/freedreno/ir3/ir3_shader.c; then
+        sed -i '/ir3_optimize_loop/a \   ir3_fusion_pass(shader);' src/freedreno/ir3/ir3_shader.c || true
+    fi
 
     # 4. Adaptive Memory Compression
     # Forçar UBWC (Universal Bandwidth Compression) onde possível
@@ -71,7 +69,9 @@ apply_optimizations(){
 
     # 5. Pipeline Prefetch
     # Aumentar o prefetch de comandos
-    sed -i 's/CP_PREFETCH_CNT = 16/CP_PREFETCH_CNT = 64/g' src/freedreno/vulkan/tu_private.h || true
+    if [ -f src/freedreno/vulkan/tu_private.h ]; then
+        sed -i 's/CP_PREFETCH_CNT = 16/CP_PREFETCH_CNT = 64/g' src/freedreno/vulkan/tu_private.h || true
+    fi
 }
 
 build_lib_for_android(){
@@ -108,7 +108,8 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    meson setup build-android-aarch64 \
+    # Usar meson instalado via pip
+    python3 -m meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
         -Dbuildtype=release \

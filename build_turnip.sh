@@ -38,6 +38,13 @@ prepare_workdir(){
             patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."
         fi
     done
+
+    # CORREÇÃO MANUAL PARA O ERRO DE NARROWING NO C++
+    # O compilador Clang do NDK r26b é muito rigoroso com narrowing em listas de inicialização C++11
+    if [ -f src/freedreno/vulkan/tu_buffer.cc ]; then
+        echo "Fixing narrowing error in tu_buffer.cc..."
+        sed -i 's/\.memoryTypeBits = (1 << device->physical_device->memory.non_lazy_type_count) - 1,/.memoryTypeBits = (uint32_t)((1 << device->physical_device->memory.non_lazy_type_count) - 1),/g' src/freedreno/vulkan/tu_buffer.cc
+    fi
 }
 
 apply_optimizations(){
@@ -100,7 +107,7 @@ EOF
     # Forçar a desativação de dependências problemáticas
     sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
 
-    # Desativar shader-cache, zstd, zlib, spirv-tools e forçar o build a ignorar avisos como erros
+    # Configuração final estável
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \

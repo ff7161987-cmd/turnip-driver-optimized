@@ -38,13 +38,6 @@ prepare_workdir(){
             patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."
         fi
     done
-
-    # CORREÇÃO MANUAL PARA O ERRO DE NARROWING NO C++
-    # O compilador Clang do NDK r26b é muito rigoroso com narrowing em listas de inicialização C++11
-    if [ -f src/freedreno/vulkan/tu_buffer.cc ]; then
-        echo "Fixing narrowing error in tu_buffer.cc..."
-        sed -i 's/\.memoryTypeBits = (1 << device->physical_device->memory.non_lazy_type_count) - 1,/.memoryTypeBits = (uint32_t)((1 << device->physical_device->memory.non_lazy_type_count) - 1),/g' src/freedreno/vulkan/tu_buffer.cc
-    fi
 }
 
 apply_optimizations(){
@@ -87,11 +80,13 @@ build_lib_for_android(){
 
     local cver="34"
 
+    # A SOLUÇÃO DEFINITIVA PARA O ERRO DE NARROWING:
+    # Adicionar -Wno-error=narrowing e -Wno-narrowing nas flags do compilador
     cat <<EOF >"android-aarch64.txt"
 [binaries]
 ar = '$ndk/llvm-ar'
 c = ['$ndk/aarch64-linux-android${cver}-clang']
-cpp = ['$ndk/aarch64-linux-android${cver}-clang++', '-fno-exceptions', '-fno-unwind-tables', '-static-libstdc++']
+cpp = ['$ndk/aarch64-linux-android${cver}-clang++', '-fno-exceptions', '-fno-unwind-tables', '-static-libstdc++', '-Wno-error=narrowing', '-Wno-narrowing']
 c_ld = '$ndk/ld.lld'
 cpp_ld = '$ndk/ld.lld'
 strip = '$ndk/llvm-strip'

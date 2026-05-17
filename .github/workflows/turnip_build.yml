@@ -21,7 +21,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y ninja-build patchelf unzip curl flex bison zip glslang-tools pkg-config clang lld llvm ccache
-          pip install --break-system-packages meson mako
+          pip install --break-system-packages meson mako PyYAML
 
       - name: Run Build Script
         run: |

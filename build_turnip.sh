@@ -30,19 +30,8 @@ prepare_workdir(){
     
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches do ZIP original (Removendo patches que causam erros no Python)
-    echo "Applying original patches from ZIP..."
-    for p in ../../patches/*.patch ../../*.patch; do
-        if [ -f "$p" ]; then
-            # Pular patches que modificam freedreno_devices.py de forma incompatível
-            if [[ "$p" == *"tu_gen8.patch"* ]] || [[ "$p" == *"tu8_kgsl_26.patch"* ]]; then
-                echo "Skipping incompatible patch: $p"
-                continue
-            fi
-            echo "Applying $p"
-            patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."
-        fi
-    done
+    # Pular patches externos que estão quebrando o build
+    echo "Skipping external patches to ensure stability..."
 }
 
 apply_optimizations(){

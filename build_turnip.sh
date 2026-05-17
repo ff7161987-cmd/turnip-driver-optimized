@@ -38,6 +38,14 @@ prepare_workdir(){
             patch -p1 -F3 -N < "$p" || echo "Failed to apply $p, skipping..."
         fi
     done
+
+    # CORREÇÃO PARA O ERRO DE LINKAGEM (zlib/gzopen)
+    # O Mesa tenta usar zlib para arquivos .rd (registro de comandos). 
+    # Como desativamos zlib, precisamos desativar o código que o usa.
+    if [ -f src/freedreno/common/freedreno_rd_output.c ]; then
+        echo "Disabling zlib usage in freedreno_rd_output.c..."
+        sed -i 's/#ifdef HAVE_ZLIB/#if 0/g' src/freedreno/common/freedreno_rd_output.c
+    fi
 }
 
 apply_optimizations(){
@@ -80,7 +88,6 @@ build_lib_for_android(){
 
     local cver="34"
 
-    # Adicionar -Wno-array-bounds para evitar erros em macros do Mesa que o Clang r26b não gosta
     cat <<EOF >"android-aarch64.txt"
 [binaries]
 ar = '$ndk/llvm-ar'

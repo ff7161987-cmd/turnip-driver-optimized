@@ -30,7 +30,7 @@ prepare_workdir(){
     
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches do ZIP original (com -N para não perguntar se já aplicado)
+    # Aplicar patches do ZIP original
     echo "Applying original patches from ZIP..."
     for p in ../../patches/*.patch ../../*.patch; do
         if [ -f "$p" ]; then
@@ -97,7 +97,7 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Usar o meson do sistema que instalamos no workflow
+    # Desativar libarchive para evitar erro de openssl/evp.h ausente no NDK
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -107,7 +107,8 @@ EOF
         -Dgallium-drivers= \
         -Dvulkan-drivers=freedreno \
         -Dfreedreno-kmds=kgsl \
-        -Degl=disabled
+        -Degl=disabled \
+        -Dlibarchive=disabled
     
     ninja -C build-android-aarch64 install
 

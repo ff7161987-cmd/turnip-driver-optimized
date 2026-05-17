@@ -20,7 +20,7 @@ jobs:
       - name: Install dependencies
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build patchelf unzip curl flex bison zip glslang-tools pkg-config clang lld llvm ccache
+          sudo apt-get install -y ninja-build patchelf unzip curl flex bison zip glslang-tools pkg-config clang lld llvm ccache libssl-dev
           pip install --break-system-packages meson mako PyYAML
 
       - name: Run Build Script

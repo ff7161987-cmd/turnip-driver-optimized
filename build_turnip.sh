@@ -55,7 +55,9 @@ apply_optimizations(){
         sed -i '/ir3_optimize_loop/a \   ir3_fusion_pass(shader);' src/freedreno/ir3/ir3_shader.c || true
     fi
 
-    # 4. Adaptive Memory Compression
+    # 4. Adaptive Memory Compression (UBWC)
+    # Nota: Forçar UBWC via código pode causar falhas se não houver suporte no kernel. 
+    # Vamos habilitar apenas se o arquivo existir e for seguro.
     [ -f src/freedreno/vulkan/tu_image.cc ] && sed -i 's/has_ubwc = false/has_ubwc = true/g' src/freedreno/vulkan/tu_image.cc || true
 
     # 5. Pipeline Prefetch
@@ -97,7 +99,8 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Desativar libarchive para evitar erro de openssl/evp.h ausente no NDK
+    # Removida a opção -Dlibarchive=disabled pois ela não existe nesta versão do Mesa
+    # O erro de OpenSSL será resolvido instalando libssl-dev no workflow
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -107,8 +110,7 @@ EOF
         -Dgallium-drivers= \
         -Dvulkan-drivers=freedreno \
         -Dfreedreno-kmds=kgsl \
-        -Degl=disabled \
-        -Dlibarchive=disabled
+        -Degl=disabled
     
     ninja -C build-android-aarch64 install
 

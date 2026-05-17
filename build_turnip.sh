@@ -9,9 +9,14 @@ srcfolder="mesa"
 BUILD_VERSION="${BUILD_VERSION:-1.0}"
 
 run_all(){
+    check_deps
     prepare_workdir
     apply_optimizations
     build_lib_for_android gen8
+}
+
+check_deps(){
+    pip install --upgrade meson mako --break-system-packages &> /dev/null || true
 }
 
 prepare_workdir(){
@@ -26,13 +31,12 @@ prepare_workdir(){
     git clone "$mesasrc" --depth=1 --no-single-branch "$srcfolder"
     cd "$srcfolder"
     
-    # Mudar para a branch correta ANTES de aplicar patches e otimizações
     git checkout origin/gen8 || true
     
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches originais (com tolerância a falhas)
-    echo "Applying original patches..."
+    # Aplicar patches do ZIP original
+    echo "Applying original patches from ZIP..."
     for p in ../../patches/*.patch ../../*.patch; do
         if [ -f "$p" ]; then
             echo "Applying $p"
@@ -49,7 +53,6 @@ apply_optimizations(){
     sed -i 's/TU_DEBUG_CACHE/TU_DEBUG_CACHE | TU_DEBUG_ASYNC/g' src/freedreno/vulkan/tu_device.cc || true
     
     # 2. Timeline Synchronization & Minimal Barrier Insertion
-    # Nota: Arquivos em C++ terminam em .cc no Mesa moderno
     [ -f src/freedreno/vulkan/tu_cmd_buffer.cc ] && sed -i 's/pipeline_barrier/minimal_pipeline_barrier/g' src/freedreno/vulkan/tu_cmd_buffer.cc || true
 
     # 3. Shader Instruction Fusion
@@ -99,10 +102,7 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Garantir que o meson está disponível
-    pip install --upgrade meson mako --break-system-packages
-    
-    meson setup build-android-aarch64 \
+    python3 -m meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
         -Dbuildtype=release \

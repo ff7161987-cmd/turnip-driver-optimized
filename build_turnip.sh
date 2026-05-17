@@ -100,7 +100,8 @@ EOF
     # Forçar a desativação de dependências problemáticas
     sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
 
-    # Desativar zstd e zlib que estão causando erro de cabeçalho ausente no NDK
+    # Desativar shader-cache para evitar dependência de compressão (zlib/zstd)
+    # Desativar zstd e zlib
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -113,6 +114,7 @@ EOF
         -Degl=disabled \
         -Dzstd=disabled \
         -Dzlib=disabled \
+        -Dshader-cache=disabled \
         -Dwrap_mode=nodownload
     
     ninja -C build-android-aarch64 install

@@ -80,13 +80,12 @@ build_lib_for_android(){
 
     local cver="34"
 
-    # A SOLUÇÃO DEFINITIVA PARA O ERRO DE NARROWING:
-    # Adicionar -Wno-error=narrowing e -Wno-narrowing nas flags do compilador
+    # Adicionar -Wno-array-bounds para evitar erros em macros do Mesa que o Clang r26b não gosta
     cat <<EOF >"android-aarch64.txt"
 [binaries]
 ar = '$ndk/llvm-ar'
-c = ['$ndk/aarch64-linux-android${cver}-clang']
-cpp = ['$ndk/aarch64-linux-android${cver}-clang++', '-fno-exceptions', '-fno-unwind-tables', '-static-libstdc++', '-Wno-error=narrowing', '-Wno-narrowing']
+c = ['$ndk/aarch64-linux-android${cver}-clang', '-Wno-array-bounds']
+cpp = ['$ndk/aarch64-linux-android${cver}-clang++', '-fno-exceptions', '-fno-unwind-tables', '-static-libstdc++', '-Wno-error=narrowing', '-Wno-narrowing', '-Wno-array-bounds']
 c_ld = '$ndk/ld.lld'
 cpp_ld = '$ndk/ld.lld'
 strip = '$ndk/llvm-strip'

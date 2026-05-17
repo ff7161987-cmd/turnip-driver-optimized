@@ -100,7 +100,7 @@ EOF
     # Forçar a desativação de dependências problemáticas
     sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
 
-    # Removida a opção -Dminiz=disabled pois ela não existe nesta versão do Mesa
+    # Desativar shader-cache, zstd, zlib, spirv-tools e forçar o build a ignorar avisos como erros
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -115,6 +115,7 @@ EOF
         -Dzlib=disabled \
         -Dshader-cache=disabled \
         -Dspirv-tools=disabled \
+        -Dwerror=false \
         -Dwrap_mode=nodownload
     
     ninja -C build-android-aarch64 install

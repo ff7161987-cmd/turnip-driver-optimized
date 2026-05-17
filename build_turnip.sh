@@ -100,7 +100,7 @@ EOF
     # Forçar a desativação de dependências problemáticas
     sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
 
-    # Desativar shader-cache, zstd, zlib e agora também o miniz e spirv-tools
+    # Removida a opção -Dminiz=disabled pois ela não existe nesta versão do Mesa
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -114,7 +114,6 @@ EOF
         -Dzstd=disabled \
         -Dzlib=disabled \
         -Dshader-cache=disabled \
-        -Dminiz=disabled \
         -Dspirv-tools=disabled \
         -Dwrap_mode=nodownload
     

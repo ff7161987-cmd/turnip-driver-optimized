@@ -30,9 +30,8 @@ prepare_workdir(){
     
     echo "#define TUGEN8_DRV_VERSION \"-Optimized\"" > ./src/freedreno/vulkan/tu_version.h
 
-    # Aplicar patches do ZIP original (Apenas os que não quebram o build)
+    # Aplicar patches do ZIP original (Apenas os estáveis)
     echo "Applying original patches from ZIP..."
-    # Removendo tu_gen8_clean.patch pois ele também está causando erros de NameError no Python
     for p in ../../patches/force_sysmem_no_autotuner.patch ../../patches/quest3.patch ../../patches/vk_sync_timeline.patch; do
         if [ -f "$p" ]; then
             echo "Applying $p"
@@ -98,9 +97,10 @@ cpu = 'armv8'
 endian = 'little'
 EOF
 
-    # Forçar a desativação do libarchive via sed no meson.build
+    # Forçar a desativação de dependências problemáticas
     sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
 
+    # Desativar zstd e zlib que estão causando erro de cabeçalho ausente no NDK
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -111,6 +111,8 @@ EOF
         -Dvulkan-drivers=freedreno \
         -Dfreedreno-kmds=kgsl \
         -Degl=disabled \
+        -Dzstd=disabled \
+        -Dzlib=disabled \
         -Dwrap_mode=nodownload
     
     ninja -C build-android-aarch64 install

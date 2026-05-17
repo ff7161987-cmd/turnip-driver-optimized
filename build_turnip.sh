@@ -39,8 +39,9 @@ prepare_workdir(){
         fi
     done
 
-    # CORREÇÃO DEFINITIVA PARA O ERRO DE LINKAGEM (zlib/gzopen)
+    # CORREÇÃO PARA O ERRO DE LINKAGEM (zlib/gzopen)
     # Vamos desativar o suporte a ferramentas de depuração que exigem zlib
+    # A opção correta é -Dtools= em vez de -Dfreedreno-tools
     echo "Disabling tools that require zlib..."
     sed -i "s/with_tools.contains('freedreno')/false/g" meson.build || true
 }
@@ -106,6 +107,7 @@ EOF
     sed -i "s/dep_libarchive = dependency('libarchive'/dep_libarchive = dependency('', required: false/g" meson.build || true
 
     # Configuração final estável
+    # Removido -Dfreedreno-tools=disabled e adicionado -Dtools= (vazio)
     meson setup build-android-aarch64 \
         --cross-file "android-aarch64.txt" \
         --prefix "/tmp/turnip-$1" \
@@ -120,7 +122,7 @@ EOF
         -Dzlib=disabled \
         -Dshader-cache=disabled \
         -Dspirv-tools=disabled \
-        -Dfreedreno-tools=disabled \
+        -Dtools= \
         -Dwerror=false \
         -Dwrap_mode=nodownload
     

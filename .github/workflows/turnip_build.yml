@@ -1,0 +1,37 @@
+name: Turnip Driver Optimized Build
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y meson ninja-build patchelf unzip curl flex bison zip glslang-tools pkg-config clang lld llvm ccache
+          pip install mako
+
+      - name: Run Build Script
+        run: |
+          chmod +x build_turnip.sh
+          ./build_turnip.sh
+        env:
+          BUILD_VERSION: "26.2.0-R4-Optimized"
+
+      - name: Upload Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Turnip-Driver-Optimized
+          path: turnip_workdir/*.zip
